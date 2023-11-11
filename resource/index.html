@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    #header {
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        width: 100%;
+        background-color: darkslategray;
+        height: 50px;
+        text-align: center;
+    }
+
+    #footer {
+        position: fixed;
+        bottom: 0px;
+        left: 0px;
+        width: 100%;
+        height: 50px;
+        background-color: darkslategray;
+        text-align: center;
+    }
+
+    .filter {
+        display: inline-block;
+        height: 20px;
+        margin: 15px;
+    }
+
+    #table {
+        overflow: scroll;
+        width: 100vw;
+        position: fixed;
+        top: 50px;
+        left: 0px;
+        height: calc(100vh - 100px);
+        background-color: rgb(185, 238, 238);
+    }
+
+    #uto_5 {
+        border-collapse: collapse;
+        table-layout: fixed;
+        text-align: center;
+
+
+    }
+
+    th,
+    td {
+        border: 1px solid rgb(26, 23, 23);
+    }
+
+    #import_excel {
+        float: right;
+    }
+</style>
+
+<body>
+    <div id="header">
+
+        <input id="from_date" type="date">
+        <input id="to_date" type="date">
+        <input id="from_month" type="month">
+        <input id="to_month" type="month">
+
+        <select id="station" class="filter">
+            <option selected>Станция</option>
+        </select>
+
+        <select id="type" class="filter">
+            <option>Вид движения</option>
+            <option label="Все">Все</option>
+            <option label="Пассажирское">Пассажирское</option>
+            <option label="Грузовое">Грузовое без передат. и вывозн.</option>
+            <option>Передаточное и вывозное</option>
+            <option>Хозяйственное</option>
+            <option>Маневровое</option>
+            <option>Прочее</option>
+            <option>ДОППР</option>
+        </select>
+        <button id="apply" class="filter" type="button">Применить</button>
+
+    </div>
+
+    <div id="table">
+        <table id="uto_5">
+            <tbody id="uto_5_body">
+
+            </tbody>
+        </table>
+    </div>
+    <div id="footer">
+        <button id="save" class="filter" type="button">Сохранить</button>
+        <button id="import_excel" class="filter" type="button">Excel</button>
+    </div>
+</body>
+
+
+
+<script>
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', '/stations_list');
+    xhr.onload = function () {
+
+        let resJson = xhr.response;
+        let result = JSON.parse(resJson);
+        console.log(result);
+
+        for (let i of result) {
+
+            let htmlStation = '<option>' + i + '</option>'
+            stationSelect.innerHTML += htmlStation;
+        }
+
+    }
+
+    xhr.send();
+
+    let stationSelect = document.getElementById('station');
+
+    document.getElementById('apply').onclick = function () {
+        let table = document.getElementById('uto_5_body')
+        let xhr = new XMLHttpRequest();
+        let station = stationSelect.options[stationSelect.selectedIndex].text
+        let typeTrafficSelect = document.getElementById('type').value;
+
+        let fromMonthSelect = document.getElementById('from_month').value
+        let toMonthSelect = document.getElementById('to_month').value
+
+        let fromDate = document.getElementById('from_date').value
+        let toDate = document.getElementById('to_date').value
+
+
+        xhr.open('GET', '/report_dc/' + station + ',' + typeTrafficSelect + ',' + fromMonthSelect + ',' + toMonthSelect + ',' + fromDate + ',' + toDate);
+        xhr.onload = function () {
+            let resJson = xhr.response;
+            let result = JSON.parse(resJson);
+            console.log(result);
+
+            table.innerHTML = '<tr>' +
+                '<th>Вид движения</th>' +
+                '<th>Табельный номер</th>' +
+                '<th>Депо приписки (Объединенное депо приписки)</th>' +
+                '<th>Станция отправления</th>' +
+                '<th>Машинист</th>' +
+                '<th>Локомотив серия</th>' +
+                '<th>Локомотив номер</th>' +
+                '<th>Явка</th>' +
+                '<th>Дата и время начала приемки</th>' +
+                '<th>Дата и время отправления</th>' +
+                '<th>Номер поезда</th>' +
+                '<th>Виновная служба</th>' +
+                '<th>Причина</th>' +
+                '<th>Комментарий (в том числе из АС ЦУТР)</th>' +
+                '<th>Пересидка</th>' +
+                '</tr>'
+
+            let services = ['', 'Тэкс', 'Д', 'В', 'ЛокоТех', 'Ш']
+
+            for (let i of result) {
+
+                let htmlServiceSelect = '<select>'
+                for (let y of services) {
+                    if (y == i.service) {
+                        htmlServiceSelect += '<option selected>' + y + '</option>'
+                    }
+                    else {
+                        htmlServiceSelect += '<option>' + y + '</option>'
+                    }
+                };
+                htmlServiceSelect += '</select>'
+
+
+                let htmlUto5 = '<tr class="header-table">' +
+                    '<td>' + i.type_traffic + '</td>' +
+                    '<td>' + i.numb_driver + '</td>' +
+                    '<td>' + i.depot_title + '</td>' +
+                    '<td>' + i.station + '</td>' +
+                    '<td>' + i.fio + '</td>' +
+                    '<td>' + i.locomotive_serial + '</td>' +
+                    '<td>' + i.locomotive_number + '</td>' +
+                    '<td>' + i.turnout_time + '</td>' +
+                    '<td>' + i.accept_tps_time + '</td>' +
+                    '<td>' + i.time_start_station + '</td>' +
+                    '<td>' + i.train_number + '</td>' +
+                    '<td>' + htmlServiceSelect + '</td>' +
+                    '<td> <input type="text" id="' + i.uid + '" value="' + i.reason + '"> </td>' +
+                    '<td> <input type="text" value="' + i.reason_comments + '"> </td>' +
+                    '<td>' + i.tps_time + '</td>' +
+                    '</tr> '
+                table.innerHTML += htmlUto5;
+            }
+        }
+        xhr.send();
+    };
+
+
+
+    document.getElementById('save').onclick = function () {
+        let table = document.getElementById('uto_5_body')
+        let xhr = new XMLHttpRequest();
+
+        let rows = table.rows
+        let result = []
+
+        for (let i of rows) {
+            let selectService = i.cells[11].querySelector('select')
+            let inputReason = i.cells[12].querySelector('input')
+            let inputComment = i.cells[13].querySelector('input')
+            console.log(i)
+
+            if (inputReason != null) {
+
+                let record = {}
+                record.uid = inputReason.id
+                record.service = selectService.options[selectService.selectedIndex].text
+                record.reason = inputReason.value
+                record.reason_comments = inputComment.value
+                result.push(record)
+
+            };
+
+        }
+
+        let resultJson = JSON.stringify(result)
+
+        xhr.open('POST', '/update_report_reasons');
+        xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhr.send(resultJson);
+
+    }
+
+
+
+    document.getElementById('import_excel').onclick = function () {
+
+        let xhr = new XMLHttpRequest();
+        let station = stationSelect.options[stationSelect.selectedIndex].text
+
+        let typeTrafficSelect = document.getElementById('type').value;
+        let fromMonthSelect = document.getElementById('from_month').value
+        let toMonthSelect = document.getElementById('to_month').value
+        let fromDate = document.getElementById('from_date').value
+        let toDate = document.getElementById('to_date').value
+
+        xhr.open('GET', '/excel_report/' + station + ',' + typeTrafficSelect + ',' + fromMonthSelect + ',' + toMonthSelect + ',' + fromDate + ',' + toDate);
+        xhr.responseType = 'blob';
+        xhr.onload = function () {
+            function save(blob) {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'excel.xlsx'; //filename
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                alert(url);
+            }
+            save(xhr.response)
+        }
+        xhr.send();
+    }
+</script>
+
+</html>
